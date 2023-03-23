@@ -46,7 +46,7 @@ function disassembleSysex(sysex) {
 // temp write buffer message to txt
 function writeToFile(sysex) {
   let emulatorBufferFilePath =
-    "C:/Users/11146/OneDrive/桌面/emulatorReceiveFile/Led13.txt";
+    "C:/Users/11146/OneDrive/桌面/emulatorReceiveFile/LedTime.txt";
   fs.appendFile(emulatorBufferFilePath, sysex, (err) => {
     if (err) {
       console.log(err.message);

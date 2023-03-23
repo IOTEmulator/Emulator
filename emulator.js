@@ -70,7 +70,7 @@ let i2cIsOpen = false;
  *
  */
 
-const bindingPort = "COM5";
+const bindingPort = "COM8";
 
 let serialPort = new SerialPort(bindingPort, {
   baudRate: 9600,
@@ -96,7 +96,7 @@ function readData() {
   console.log("-- Connection opened --");
   serialPort.on("data", (data) => {
     let receivedData = convertToString(data, "hex");
-    // console.log("Data received: " + receivedData); // will remove this line
+    console.log("Data received: " + receivedData); // will remove this line
     // 收到 Buffer data 分析 Query
     let analyzedData = analyzeData(receivedData);
     // 回應 Query
@@ -147,7 +147,8 @@ function analyzeData(receivedData) {
       };
       io.sockets.emit("getMessage", pinObject);
       return "";
-    case firmataProtocol.DIGITAL_DATA_PORT0:
+    case firmataProtocol.DIGITAL_DATA_PORT0 :
+    case  firmataProtocol.DIGITAL_DATA_PORT1:
       // 之後拉出去成一個function
       let LSB = receivedData.slice(2, 4).toString();
       let MSB = receivedData.slice(4, 6).toString();
@@ -164,7 +165,6 @@ function analyzeData(receivedData) {
       return "";
     default:
       // other buffer message like Led => write to txt
-      // writeToFile(disassembledData);
       return FIRMWARE_RESPONSE;
   }
 }
