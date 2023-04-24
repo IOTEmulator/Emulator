@@ -34,6 +34,9 @@ const firmataProtocol = require("./protocol/protocol");
 // Dependencies SerialPort ^9.0.2
 const SerialPort = require("serialport");
 
+// get mapping data
+const {ledColorMap,pinMap } = require("./mapping/mapping");
+
 /**
  * Firmata Protocol Query Hex Constants
  */
@@ -70,7 +73,7 @@ let i2cIsOpen = false;
  *
  */
 
-const bindingPort = "COM8";
+const bindingPort = "COM2";
 
 let serialPort = new SerialPort(bindingPort, {
   baudRate: 9600,
@@ -114,11 +117,14 @@ function writeData(analyzedData) {
     console.log("msg written :" + combinedData);
   });
 }
-
+/**
+ * global recored : pin
+ */
+let pin;
 function analyzeData(receivedData) {
   console.log("receivedData : " + receivedData);
   // disassemble receivedData
-  let disassembledData = disassembleSysex(receivedData);
+  let disassembledData = disassembleSysex(receivedData,pin);
   console.log("disassembledData : " + disassembledData);
   switch (disassembledData) {
     case PROTOCOL_VERSION_QUERY:
@@ -140,31 +146,44 @@ function analyzeData(receivedData) {
       }
     case firmataProtocol.SET_PIN_MODE:
       console.log("SET_PIN_MODE: " + disassembledData);
+      pin =  pinMap.get(receivedData.slice(2, 4).toString());
       let pinObject = {
         func: "Led",
-        pin: receivedData.slice(2, 4).toString(),
+        pin: pin ,
         mode: receivedData.slice(4, 6).toString(),
       };
       io.sockets.emit("getMessage", pinObject);
       return "";
     case firmataProtocol.DIGITAL_DATA_PORT0 :
-    case  firmataProtocol.DIGITAL_DATA_PORT1:
+    case firmataProtocol.DIGITAL_DATA_PORT1:
+    case firmataProtocol.ANALOG_IO_MESSAGE:
       // 之後拉出去成一個function
       let LSB = receivedData.slice(2, 4).toString();
       let MSB = receivedData.slice(4, 6).toString();
       console.log("LSB" + LSB);
       console.log("MSB" + MSB);
-      if (LSB === "00" && MSB === "00") {
-        // blink 關掉
-
-        io.sockets.emit("getMessage", { LedControl: "off" });
-      } else {
-        // blink 開啟
-        io.sockets.emit("getMessage", { LedControl: "on" });
-      }
+      LedColorMapping(LSB,MSB)
       return "";
     default:
       // other buffer message like Led => write to txt
       return FIRMWARE_RESPONSE;
   }
+}
+
+
+
+// Led blink mapping
+function LedColorMapping(LSB,MSB){
+  // digital pin
+  let anyNum = ledColorMap.get(pin);
+  console.log(anyNum);
+  // check pin's buffer
+  if(LSB===anyNum[0] && MSB===anyNum[1]){
+    // blink 開啟
+    io.sockets.emit("getMessage", { LedControl: "on" });
+  }else{
+    // blink 關掉
+    io.sockets.emit("getMessage", { LedControl: "off" });
+  }
+  // pwm pin
 }

@@ -1,5 +1,5 @@
 var SerialPort = require("serialport");
-var port = "COM5";
+var port = "COM8";
 
 var serialPort = new SerialPort(port, {
   baudRate: 9600

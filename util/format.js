@@ -27,7 +27,7 @@ function combineSysex(sysex) {
 }
 
 // disassemble sysex start & end command & any command
-function disassembleSysex(sysex) {
+function disassembleSysex(sysex,pin) {
   if (sysex.slice(0, 2) === START_SYSEX) {
     return sysex.slice(2, 4).toString();
   } else if (sysex.slice(0, 2) === firmataProtocol.SET_PIN_MODE) {
@@ -38,7 +38,12 @@ function disassembleSysex(sysex) {
     sysex.slice(0, 2) === firmataProtocol.DIGITAL_DATA_PORT1
   ) {
     return sysex.slice(0, 2).toString();
-  } else {
+  }else if( sysex.slice(0, 1) === firmataProtocol.ANALOG_IO_MESSAGE){
+    if(pin != undefined ){
+      return firmataProtocol.ANALOG_IO_MESSAGE ;
+    }
+  } 
+  else {
     return sysex.toString();
   }
 }
