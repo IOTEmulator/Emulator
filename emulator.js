@@ -1,7 +1,20 @@
 const express = require("express");
 const app = express();
-var cors = require("cors");
+let cors = require("cors");
 app.use(cors());
+let path = require('path');
+let cookieParser = require('cookie-parser');
+let logger = require('morgan');
+
+let indexRouter = require("./routes/index");
+app.use(logger('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+// app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', indexRouter);
+
 // event emiter
 const event = require("events");
 const emitter = event.EventEmitter();
@@ -18,6 +31,7 @@ const io = require("socket.io")(server, {
     origin: "*",
   },
 });
+
 
 // import util common module
 const {
