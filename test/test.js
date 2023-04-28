@@ -22,7 +22,7 @@ this.transport.on("data", data => {
               hexArray.push(this.buffer[i].toString(16).toUpperCase());
             }
             console.log("===================Capability Query F06BF7 =================");
-            fs.writeFile('C:/Users/11146/OneDrive/桌面/BufferFile/CapabilityQuery2.txt',hexArray.toString(),(err)=>{
+            fs.writeFile('C:/Users/520hi/BufferFile/Test/TestRead.txt',hexArray.toString(),(err)=>{
               if(err){
                 console.log("errr: " + err);
               }else{

@@ -26,6 +26,8 @@ const {
   combineSysex,
   disassembleSysex,
   writeToFile,
+  voltToHex,
+  returnAnalogReportBufData
 } = require("./util/format");
 
 // Firmata Protocol Format
@@ -35,7 +37,7 @@ const firmataProtocol = require("./protocol/protocol");
 const SerialPort = require("serialport");
 
 // get mapping data
-const {ledColorMap,pinMap } = require("./mapping/mapping");
+const { ledColorMap, pinMap } = require("./mapping/mapping");
 
 /**
  * Firmata Protocol Query Hex Constants
@@ -69,14 +71,18 @@ const I2C_RESPONCE = "77" + "01000000000000000000000000000000";
 let i2cIsOpen = false;
 
 /**
+ * test function place
+ */
+// voltToHex(0);
+/**
  * serialport open, connect, waiting for data, write data to Johnny-five.
  *
  */
 
-const bindingPort = "COM2";
+const bindingPort = "COM5";
 
 let serialPort = new SerialPort(bindingPort, {
-  baudRate: 9600,
+  baudRate: 57600,
 });
 
 serialPort.on("open", () => readData());
@@ -103,19 +109,37 @@ function readData() {
     // 收到 Buffer data 分析 Query
     let analyzedData = analyzeData(receivedData);
     // 回應 Query
-    writeData(analyzedData);
+    if (analyzedData === firmataProtocol.REPORT_ANALOG_PIN) {
+      writeData(analyzedData, true);
+    } else {
+      writeData(analyzedData);
+    }
   });
 }
 
-function writeData(analyzedData) {
-  let combinedData = combineSysex(analyzedData);
-  let bufferData = convertToBuffer(combinedData, "hex");
-  serialPort.write(bufferData, (err) => {
-    if (err) {
-      console.log("Error :" + err.message);
-    }
-    console.log("msg written :" + combinedData);
-  });
+function writeData(analyzedData, analogFlag) {
+  if (analogFlag === true) {
+    let reportBufferArray = returnAnalogReportBufData();
+    reportBufferArray.forEach(element => {
+      serialPort.write(element, (err) => {
+        if (err) {
+          console.log("Error :" + err.message);
+        }
+        console.log("msg written :" + convertToString(element,"hex"));
+      });
+    });
+
+  } else {
+    let combinedData = combineSysex(analyzedData);
+    let bufferData = convertToBuffer(combinedData, "hex");
+    serialPort.write(bufferData, (err) => {
+      if (err) {
+        console.log("Error :" + err.message);
+      }
+      console.log("msg written :" + combinedData);
+    });
+  }
+
 }
 /**
  * global recored : pin
@@ -124,7 +148,7 @@ let pin;
 function analyzeData(receivedData) {
   console.log("receivedData : " + receivedData);
   // disassemble receivedData
-  let disassembledData = disassembleSysex(receivedData,pin);
+  let disassembledData = disassembleSysex(receivedData, pin);
   console.log("disassembledData : " + disassembledData);
   switch (disassembledData) {
     case PROTOCOL_VERSION_QUERY:
@@ -146,15 +170,15 @@ function analyzeData(receivedData) {
       }
     case firmataProtocol.SET_PIN_MODE:
       console.log("SET_PIN_MODE: " + disassembledData);
-      pin =  pinMap.get(receivedData.slice(2, 4).toString());
+      pin = pinMap.get(receivedData.slice(2, 4).toString());
       let pinObject = {
         func: "Led",
-        pin: pin ,
+        pin: pin,
         mode: receivedData.slice(4, 6).toString(),
       };
       io.sockets.emit("getMessage", pinObject);
       return "";
-    case firmataProtocol.DIGITAL_DATA_PORT0 :
+    case firmataProtocol.DIGITAL_DATA_PORT0:
     case firmataProtocol.DIGITAL_DATA_PORT1:
     case firmataProtocol.ANALOG_IO_MESSAGE:
       // 之後拉出去成一個function
@@ -162,8 +186,14 @@ function analyzeData(receivedData) {
       let MSB = receivedData.slice(4, 6).toString();
       console.log("LSB" + LSB);
       console.log("MSB" + MSB);
-      LedColorMapping(LSB,MSB)
+      LedColorMapping(LSB, MSB)
       return "";
+    case firmataProtocol.REPORT_ANALOG_PIN:
+      pin = receivedData.slice(3, 4).toString();
+      console.log("open the report analog at pin " + pin);
+      voltToHex(pin);
+      return firmataProtocol.REPORT_ANALOG_PIN;
+
     default:
       // other buffer message like Led => write to txt
       return FIRMWARE_RESPONSE;
@@ -173,15 +203,15 @@ function analyzeData(receivedData) {
 
 
 // Led blink mapping
-function LedColorMapping(LSB,MSB){
+function LedColorMapping(LSB, MSB) {
   // digital pin
   let anyNum = ledColorMap.get(pin);
   console.log(anyNum);
   // check pin's buffer
-  if(LSB===anyNum[0] && MSB===anyNum[1]){
+  if (LSB === anyNum[0] && MSB === anyNum[1]) {
     // blink 開啟
     io.sockets.emit("getMessage", { LedControl: "on" });
-  }else{
+  } else {
     // blink 關掉
     io.sockets.emit("getMessage", { LedControl: "off" });
   }
