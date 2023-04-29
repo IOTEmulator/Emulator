@@ -44,6 +44,6 @@ let pinMap = new Map([
     ["13", 'A5'],
 ]);
 
+const CELSIUS_TO_KELVIN = 273.15;
 
-
-module.exports = { ledColorMap, pinMap };
+module.exports = { ledColorMap, pinMap, CELSIUS_TO_KELVIN  };

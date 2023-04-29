@@ -3,6 +3,8 @@ const fs = require("fs");
 const firmataProtocol = require("../protocol/protocol");
 // 
 const SETTING = require("../config/setting.json");
+//
+const CELSIUS_TO_KELVIN = require("../mapping/mapping")
 
 // Define Firmata SYSEX Command
 const START_SYSEX = "f0";
@@ -73,13 +75,36 @@ function writeToFile(sysex) {
  */
 let returnArray = [];
 function voltToHex(pin) {
+  returnArray = [];
   // raw celsius
-  let rawArray = SETTING.thermometer;
+  let rawArray = SETTING.thermometer.data;
   rawArray.forEach((raw) => {
-    let tempB = raw.toString(16);
+    // match controller 
+    let conntroller = SETTING.thermometer.controller;
+    let voltRAw;
+    switch (conntroller) {
+      case "LM35":
+        // c -> volt raw -> buffer hex
+        voltRAw = (raw * 1023) / (100 * 5); // r
+        break;
+      case "LM335":
+        voltRAw = (raw * 1023) / (100 * 5) + CELSIUS_TO_KELVIN; // r
+        break;
+      case "TMP36":
+        voltRAw = (raw * 1023) / (100 * 5) + 50;
+        break;
+      default:
+        // LM35
+        voltRAw = (raw * 1023) / (100 * 5); // r
+        break;
+    }
+    let tempB = Math.round(voltRAw).toString(16);
     returnArray.push(Buffer.from([`0x${tempB}`, '0x00', `0xe${pin}`]));
   });
   console.log(returnArray);
+
+
+
 }
 
 /**
