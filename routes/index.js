@@ -2,6 +2,8 @@ const express = require("express");
 let router = express.Router();
 // import setting.json
 const SETTING = require("../config/setting.json");
+// import write data function
+let { writeData } = require("../emulator");
 /* GET digital write status. */
 router.get('/digitalwrite', function (req, res) {
     res.status(200).json({ digitalwrite: true });
