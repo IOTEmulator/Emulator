@@ -51,7 +51,7 @@ const firmataProtocol = require("./protocol/protocol");
 const SerialPort = require("serialport");
 
 // get mapping data
-const { ledColorMap, pinMap } = require("./mapping/mapping");
+const { ledColorMap, pinMap, portMap } = require("./mapping/mapping");
 
 /**
  * Firmata Protocol Query Hex Constants
@@ -123,7 +123,7 @@ function readData() {
     // 收到 Buffer data 分析 Query
     let analyzedData = analyzeData(receivedData);
     // 回應 Query
-    if (analyzedData === firmataProtocol.REPORT_ANALOG_PIN) {
+    if (analyzedData === firmataProtocol.REPORT_ANALOG_PIN || analyzedData === firmataProtocol.REPORT_DIGITAL_PORT) {
       writeData(analyzedData, true);
     } else {
       writeData(analyzedData);
@@ -145,9 +145,9 @@ function writeData(analyzedData, analogFlag) {
           console.log("Error :" + err.message);
         }
       });
-      console.log("mgs write : " +convertToString(reportBufferArray[i], "hex") );
+      console.log("mgs write : " + convertToString(reportBufferArray[i], "hex"));
       i++;
-    }, 200); 
+    }, 200);
   } else {
     let combinedData = combineSysex(analyzedData);
     let bufferData = convertToBuffer(combinedData, "hex");
@@ -164,6 +164,7 @@ function writeData(analyzedData, analogFlag) {
  * global recored : pin
  */
 let pin;
+let port;
 function analyzeData(receivedData) {
   console.log("receivedData : " + receivedData);
   // disassemble receivedData
@@ -212,6 +213,11 @@ function analyzeData(receivedData) {
       console.log("open the report analog at pin " + pin);
       voltToHex(pin);
       return firmataProtocol.REPORT_ANALOG_PIN;
+    case firmataProtocol.REPORT_DIGITAL_PORT: // 0xD_port
+      port = portMap.get(pin);
+
+      return firmataProtocol.REPORT_ANALOG_PIN;
+
 
     default:
       // other buffer message like Led => write to txt
@@ -236,3 +242,5 @@ function LedColorMapping(LSB, MSB) {
   }
   // pwm pin
 }
+
+module.exports = { writeData };
