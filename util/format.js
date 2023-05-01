@@ -1,10 +1,10 @@
 const fs = require("fs");
 // firmata protocol format
 const firmataProtocol = require("../protocol/protocol");
-// 
+//
 const SETTING = require("../config/setting.json");
 //
-const CELSIUS_TO_KELVIN = require("../mapping/mapping")
+const CELSIUS_TO_KELVIN = require("../mapping/mapping");
 
 // Define Firmata SYSEX Command
 const START_SYSEX = "f0";
@@ -49,8 +49,7 @@ function disassembleSysex(sysex, pin) {
     }
   } else if (sysex.slice(0, 1) === firmataProtocol.REPORT_ANALOG_PIN) {
     return firmataProtocol.REPORT_ANALOG_PIN;
-  }
-  else {
+  } else {
     return sysex.toString();
   }
 }
@@ -70,7 +69,7 @@ function writeToFile(sysex) {
 
 /**
  * User uses setting json file for testing
- * This function tranforms true raw celsius to Hex code,  
+ * This function tranforms true raw celsius to Hex code,
  * and push data to return buffer array.
  */
 let returnArray = [];
@@ -79,7 +78,7 @@ function voltToHex(pin) {
   // raw celsius
   let rawArray = SETTING.thermometer.data;
   rawArray.forEach((raw) => {
-    // match controller 
+    // match controller
     let conntroller = SETTING.thermometer.controller;
     let voltRAw;
     switch (conntroller) {
@@ -99,12 +98,9 @@ function voltToHex(pin) {
         break;
     }
     let tempB = Math.round(voltRAw).toString(16);
-    returnArray.push(Buffer.from([`0x${tempB}`, '0x00', `0xe${pin}`]));
+    returnArray.push(Buffer.from([`0x${tempB}`, "0x00", `0xe${pin}`]));
   });
   console.log(returnArray);
-
-
-
 }
 
 /**
@@ -121,5 +117,5 @@ module.exports = {
   disassembleSysex,
   writeToFile,
   voltToHex,
-  returnAnalogReportBufData
+  returnAnalogReportBufData,
 };

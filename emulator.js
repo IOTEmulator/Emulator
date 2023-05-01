@@ -2,18 +2,21 @@ const express = require("express");
 const app = express();
 let cors = require("cors");
 app.use(cors());
-let path = require('path');
-let cookieParser = require('cookie-parser');
-let logger = require('morgan');
+let path = require("path");
+let cookieParser = require("cookie-parser");
+let logger = require("morgan");
+const bodyParser = require("body-parser");
 
 let indexRouter = require("./routes/index");
-app.use(logger('dev'));
+app.use(logger("dev"));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
+app.use("/", indexRouter);
 
 // event emiter
 const event = require("events");
@@ -32,7 +35,6 @@ const io = require("socket.io")(server, {
   },
 });
 
-
 // import util common module
 const {
   convertToBuffer,
@@ -41,7 +43,7 @@ const {
   disassembleSysex,
   writeToFile,
   voltToHex,
-  returnAnalogReportBufData
+  returnAnalogReportBufData,
 } = require("./util/format");
 
 // Firmata Protocol Format
@@ -93,7 +95,7 @@ let i2cIsOpen = false;
  *
  */
 
-const bindingPort = "COM5";
+const bindingPort = "COM222";
 
 let serialPort = new SerialPort(bindingPort, {
   baudRate: 57600,
@@ -123,7 +125,10 @@ function readData() {
     // 收到 Buffer data 分析 Query
     let analyzedData = analyzeData(receivedData);
     // 回應 Query
-    if (analyzedData === firmataProtocol.REPORT_ANALOG_PIN || analyzedData === firmataProtocol.REPORT_DIGITAL_PORT) {
+    if (
+      analyzedData === firmataProtocol.REPORT_ANALOG_PIN ||
+      analyzedData === firmataProtocol.REPORT_DIGITAL_PORT
+    ) {
       writeData(analyzedData, true);
     } else {
       writeData(analyzedData);
@@ -131,7 +136,23 @@ function readData() {
   });
 }
 
-function writeData(analyzedData, analogFlag) {
+function writeData(analyzedData, analogFlag, eventName) {
+  // 先這樣寫判斷api事件
+  switch (eventName) {
+    case "clickButton":
+      serialPort.write(analyzedData, (err) => {
+        if (err) {
+          console.log("Error :" + err.message);
+          return 400;
+        } else {
+          console.log(analyzedData.toString());
+          return 200;
+        }
+      });
+      break;
+    default:
+      break;
+  }
   if (analogFlag === true) {
     let reportBufferArray = returnAnalogReportBufData();
     let i = 0;
@@ -145,7 +166,9 @@ function writeData(analyzedData, analogFlag) {
           console.log("Error :" + err.message);
         }
       });
-      console.log("mgs write : " + convertToString(reportBufferArray[i], "hex"));
+      console.log(
+        "mgs write : " + convertToString(reportBufferArray[i], "hex")
+      );
       i++;
     }, 200);
   } else {
@@ -158,7 +181,6 @@ function writeData(analyzedData, analogFlag) {
       console.log("msg written :" + combinedData);
     });
   }
-
 }
 /**
  * global recored : pin
@@ -206,7 +228,7 @@ function analyzeData(receivedData) {
       let MSB = receivedData.slice(4, 6).toString();
       console.log("LSB" + LSB);
       console.log("MSB" + MSB);
-      LedColorMapping(LSB, MSB)
+      LedColorMapping(LSB, MSB);
       return "";
     case firmataProtocol.REPORT_ANALOG_PIN:
       pin = receivedData.slice(3, 4).toString();
@@ -218,14 +240,11 @@ function analyzeData(receivedData) {
 
       return firmataProtocol.REPORT_ANALOG_PIN;
 
-
     default:
       // other buffer message like Led => write to txt
       return FIRMWARE_RESPONSE;
   }
 }
-
-
 
 // Led blink mapping
 function LedColorMapping(LSB, MSB) {
