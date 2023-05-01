@@ -7,16 +7,13 @@ let cookieParser = require("cookie-parser");
 let logger = require("morgan");
 const bodyParser = require("body-parser");
 
-let indexRouter = require("./routes/index");
+// let indexRouter = require("./routes/index");
 app.use(logger("dev"));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-// app.use(express.static(path.join(__dirname, 'public')));
-
-app.use("/", indexRouter);
 
 // event emiter
 const event = require("events");
@@ -95,7 +92,7 @@ let i2cIsOpen = false;
  *
  */
 
-const bindingPort = "COM222";
+const bindingPort = "COM122";
 
 let serialPort = new SerialPort(bindingPort, {
   baudRate: 57600,
@@ -138,22 +135,35 @@ function readData() {
 
 function writeData(analyzedData, analogFlag, eventName) {
   // 先這樣寫判斷api事件
-  switch (eventName) {
-    case "clickButton":
-      serialPort.write(analyzedData, (err) => {
-        if (err) {
-          console.log("Error :" + err.message);
-          return 400;
-        } else {
-          console.log(analyzedData.toString());
-          return 200;
-        }
-      });
-      break;
-    default:
-      break;
-  }
-  if (analogFlag === true) {
+  // switch (eventName) {
+  //   case "clickButton":
+  //     serialPort.write(analyzedData, (err) => {
+  //       if (err) {
+  //         console.log("Error :" + err.message);
+  //         return 400;
+  //       } else {
+  //         console.log(analyzedData.toString());
+  //         return 200;
+  //       }
+  //     });
+  //     break;
+  //   default:
+  //     break;
+  // }
+  if (eventName === "clickButton") {
+    console.log("1");
+    let status;
+    serialPort.write(analyzedData, (err) => {
+      if (err) {
+        console.log("Error :" + err.message);
+        return 400;
+      } else {
+        console.log(analyzedData.toString("hex"));
+        return 200;
+      }
+    });
+  } else if (analogFlag === true) {
+    console.log("2");
     let reportBufferArray = returnAnalogReportBufData();
     let i = 0;
     let interval = setInterval(function () {
@@ -172,6 +182,7 @@ function writeData(analyzedData, analogFlag, eventName) {
       i++;
     }, 200);
   } else {
+    console.log("3");
     let combinedData = combineSysex(analyzedData);
     let bufferData = convertToBuffer(combinedData, "hex");
     serialPort.write(bufferData, (err) => {
@@ -262,4 +273,69 @@ function LedColorMapping(LSB, MSB) {
   // pwm pin
 }
 
-module.exports = { writeData };
+/**
+ * API
+ */
+// import write data function
+let { clickButton } = require("./util/event");
+
+/* GET digital write status. */
+app.get("/digitalwrite", function (req, res) {
+  res.status(200).json({ digitalwrite: true });
+});
+
+/* GET analog write status. */
+// 螢幕亮度的調光、LED 連續亮度\的調整、喇叭音量大小的控制
+app.get("/analogwrite", function (req, res) {
+  res.status(200).json({ analogwrite: true });
+});
+
+/* GET digital read status. */
+// click digital button
+app.get("/digitalread", function (req, res) {
+  res.status(200).json({ digitalread: true });
+});
+
+/* POST : user post this api to emulate clicking button. */
+app.post("/clickbutton", async (req, res, next) => {
+  // serialPort.write(dataToTransport, (err) => {
+  //   if (err) {
+  //     console.log("Error :" + err.message);
+  //     res.status(200).json({ clickbutton: "success" });
+  //   } else {
+  //     console.log(dataToTransport.toString("hex"));
+  //     res.status(400).json({ clickbutton: "fail" });
+  //   }
+  // });
+  try {
+    let pin = req.body.pin;
+    let dataToTransport = clickButton(pin);
+    await writeSerialData(dataToTransport);
+    res.status(200).json({ clickbutton: "success" });
+  } catch (error) {
+    res.status(400).json({ clickbutton: "fail" });
+  }
+  // let status = await writeData(dataToTransport, false, "clickButton")
+  // if (status === 200) {
+  //   res.status(200).json({ clickbutton: "success" });
+  // } else {
+  //   res.status(400).json({ clickbutton: "fail" });
+  // }
+});
+/* GET analog read status. */
+// read setting json file
+app.get("/analogread", function (req, res) {
+  res.status(200).json({ analogread: SETTING.thermometer });
+});
+
+function writeSerialData(data) {
+  return new Promise((resolve, reject) => {
+    serialPort.write(data, (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
