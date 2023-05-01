@@ -198,6 +198,8 @@ function writeData(analyzedData, analogFlag, eventName) {
  */
 let pin;
 let port;
+// local app data
+app.locals.digitalwrite;
 function analyzeData(receivedData) {
   console.log("receivedData : " + receivedData);
   // disassemble receivedData
@@ -266,9 +268,11 @@ function LedColorMapping(LSB, MSB) {
   if (LSB === anyNum[0] && MSB === anyNum[1]) {
     // blink 開啟
     io.sockets.emit("getMessage", { LedControl: "on" });
+    app.locals.digitalwrite = "on";
   } else {
     // blink 關掉
     io.sockets.emit("getMessage", { LedControl: "off" });
+    app.locals.digitalwrite = "off";
   }
   // pwm pin
 }
@@ -281,7 +285,7 @@ let { clickButton } = require("./util/event");
 
 /* GET digital write status. */
 app.get("/digitalwrite", function (req, res) {
-  res.status(200).json({ digitalwrite: true });
+  res.status(200).json({ "your led status": app.locals.digitalwrite });
 });
 
 /* GET analog write status. */

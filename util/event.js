@@ -14,5 +14,8 @@ function clickButton(pin) {
   ]);
   return dataToTransport;
 }
-
+/**
+ * Return the digital write result buffer data array.
+ */
+// function
 module.exports = { clickButton };
