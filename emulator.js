@@ -50,7 +50,7 @@ const firmataProtocol = require("./protocol/protocol");
 const SerialPort = require("serialport");
 
 // get mapping data
-const { ledColorMap, pinMap, portMap } = require("./mapping/mapping");
+const { ledColorMap, pinMap, portMap, MODES } = require("./mapping/mapping");
 
 /**
  * Firmata Protocol Query Hex Constants
@@ -196,10 +196,14 @@ function writeData(analyzedData, analogFlag, eventName) {
 /**
  * global recored : pin
  */
+let pinHex;
 let pin;
+let mode;
 let port;
 // local app data
 app.locals.digitalwrite;
+app.locals.LSB;
+app.locals.MSB;
 function analyzeData(receivedData) {
   console.log("receivedData : " + receivedData);
   // disassemble receivedData
@@ -225,7 +229,11 @@ function analyzeData(receivedData) {
       }
     case firmataProtocol.SET_PIN_MODE:
       console.log("SET_PIN_MODE: " + disassembledData);
+      mode = receivedData.slice(4, 6).toString();
+      pinHex = receivedData.slice(2, 4).toString();
       pin = pinMap.get(receivedData.slice(2, 4).toString());
+      console.log("pinHex : " + pinHex);
+      console.log("pin : " + pin);
       let pinObject = {
         func: "Led",
         pin: pin,
@@ -233,15 +241,20 @@ function analyzeData(receivedData) {
       };
       io.sockets.emit("getMessage", pinObject);
       return "";
+
     case firmataProtocol.DIGITAL_DATA_PORT0:
     case firmataProtocol.DIGITAL_DATA_PORT1:
     case firmataProtocol.ANALOG_IO_MESSAGE:
       // 之後拉出去成一個function
-      let LSB = receivedData.slice(2, 4).toString();
-      let MSB = receivedData.slice(4, 6).toString();
-      console.log("LSB" + LSB);
-      console.log("MSB" + MSB);
-      LedColorMapping(LSB, MSB);
+      app.locals.LSB = receivedData.slice(2, 4).toString();
+      app.locals.MSB = receivedData.slice(4, 6).toString();
+      console.log("LSB" + app.locals.LSB);
+      console.log("MSB" + app.locals.MSB);
+      if (mode === MODES.PWM) {
+        controlLedBrightness(app.locals.LSB, app.locals.MSB);
+      } else {
+        LedColorMapping(app.locals.LSB, app.locals.MSB);
+      }
       return "";
     case firmataProtocol.REPORT_ANALOG_PIN:
       pin = receivedData.slice(3, 4).toString();
@@ -281,7 +294,7 @@ function LedColorMapping(LSB, MSB) {
  * API
  */
 // import write data function
-let { clickButton } = require("./util/event");
+let { clickButton, controlLedBrightness } = require("./util/event");
 
 /* GET digital write status. */
 app.get("/digitalwrite", function (req, res) {
@@ -298,6 +311,16 @@ app.get("/analogwrite", function (req, res) {
 // click digital button
 app.get("/digitalread", function (req, res) {
   res.status(200).json({ digitalread: true });
+});
+app.get("/brightness", async function (req, res) {
+  // 處理使用者輸入亮度 0-255
+  let value = controlLedBrightness(pinHex, app.locals.LSB, app.locals.MSB);
+  console.log(value);
+  try {
+    res.status(200).json({ brightness: value });
+  } catch (error) {
+    res.status(400).json({ brightness: "fail" });
+  }
 });
 
 /* POST : user post this api to emulate clicking button. */

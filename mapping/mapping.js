@@ -91,6 +91,13 @@ const portMap = new Map([
 ]);
 
 const CELSIUS_TO_KELVIN = 273.15;
+const MODES = {
+  INPUT: "00",
+  OUTPUT: "01",
+  ANALOG: "02",
+  PWM: "03",
+  SERVO: "04",
+};
 
 module.exports = {
   ledColorMap,
@@ -98,4 +105,5 @@ module.exports = {
   CELSIUS_TO_KELVIN,
   portMap,
   btnClickMap,
+  MODES,
 };

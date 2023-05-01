@@ -15,7 +15,18 @@ function clickButton(pin) {
   return dataToTransport;
 }
 /**
- * Return the digital write result buffer data array.
+ * Return the analog write result buffer data array.
  */
-// function
-module.exports = { clickButton };
+function controlLedBrightness(pinHex, LSB, MSB) {
+  let returnVal;
+  if (MSB === "00") {
+    // 0-127
+    returnVal = parseInt(LSB, 16);
+  } else {
+    // 128-255
+    returnVal = parseInt(LSB, 16) + 128;
+  }
+
+  return returnVal;
+}
+module.exports = { clickButton, controlLedBrightness };
