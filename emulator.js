@@ -298,15 +298,6 @@ app.get("/digitalread", function (req, res) {
 
 /* POST : user post this api to emulate clicking button. */
 app.post("/clickbutton", async (req, res, next) => {
-  // serialPort.write(dataToTransport, (err) => {
-  //   if (err) {
-  //     console.log("Error :" + err.message);
-  //     res.status(200).json({ clickbutton: "success" });
-  //   } else {
-  //     console.log(dataToTransport.toString("hex"));
-  //     res.status(400).json({ clickbutton: "fail" });
-  //   }
-  // });
   try {
     let pin = req.body.pin;
     let dataToTransport = clickButton(pin);
@@ -315,12 +306,6 @@ app.post("/clickbutton", async (req, res, next) => {
   } catch (error) {
     res.status(400).json({ clickbutton: "fail" });
   }
-  // let status = await writeData(dataToTransport, false, "clickButton")
-  // if (status === 200) {
-  //   res.status(200).json({ clickbutton: "success" });
-  // } else {
-  //   res.status(400).json({ clickbutton: "fail" });
-  // }
 });
 /* GET analog read status. */
 // read setting json file
