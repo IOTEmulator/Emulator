@@ -201,7 +201,7 @@ let pin;
 let mode;
 let port;
 // local app data
-app.locals.digitalwrite;
+app.locals.ledstatus;
 app.locals.LSB;
 app.locals.MSB;
 function analyzeData(receivedData) {
@@ -281,11 +281,11 @@ function LedColorMapping(LSB, MSB) {
   if (LSB === anyNum[0] && MSB === anyNum[1]) {
     // blink 開啟
     io.sockets.emit("getMessage", { LedControl: "on" });
-    app.locals.digitalwrite = "on";
+    app.locals.ledstatus = "on";
   } else {
     // blink 關掉
     io.sockets.emit("getMessage", { LedControl: "off" });
-    app.locals.digitalwrite = "off";
+    app.locals.ledstatus = "off";
   }
   // pwm pin
 }
@@ -297,8 +297,8 @@ function LedColorMapping(LSB, MSB) {
 let { clickButton, controlLedBrightness } = require("./util/event");
 
 /* GET digital write status. */
-app.get("/digitalwrite", function (req, res) {
-  res.status(200).json({ "your led status": app.locals.digitalwrite });
+app.get("/ledstatus", (req, res) => {
+  res.status(200).json({ "your led status": app.locals.ledstatus });
 });
 
 /* GET analog write status. */
@@ -312,6 +312,9 @@ app.get("/analogwrite", function (req, res) {
 app.get("/digitalread", function (req, res) {
   res.status(200).json({ digitalread: true });
 });
+/**
+ * GET : (for J5 analog write)
+ */
 app.get("/brightness", async function (req, res) {
   // 處理使用者輸入亮度 0-255
   let value = controlLedBrightness(pinHex, app.locals.LSB, app.locals.MSB);
@@ -323,16 +326,36 @@ app.get("/brightness", async function (req, res) {
   }
 });
 
-/* POST : user post this api to emulate clicking button. */
+/* POST : user post this api to emulate clicking button. (for J5 digital read) */
 app.post("/clickbutton", async (req, res, next) => {
-  try {
-    let pin = req.body.pin;
-    let dataToTransport = clickButton(pin);
-    await writeSerialData(dataToTransport);
-    res.status(200).json({ clickbutton: "success" });
-  } catch (error) {
-    res.status(400).json({ clickbutton: "fail" });
+  let pin = req.body.pin;
+  if (pin > 19 || pin < 0) {
+    res.status(200).json({ success: false });
+  } else {
+    try {
+      let dataToTransport = clickButton(pin);
+      await writeSerialData(dataToTransport);
+      res.status(200).json({ success: true });
+    } catch (error) {
+      res.status(400);
+    }
   }
+
+  // return new Promise(async (resolve, reject) => {
+  //   // 异步操作
+  //   let pin = req.body.pin;
+  //   console.log("pin : " + pin);
+  //   let dataToTransport = clickButton(pin);
+  //   await writeSerialData(dataToTransport);
+  //   resolve("success");
+  // })
+  //   .then((result) => {
+  //     res.send(result);
+  //   })
+  //   .catch((err) => {
+  //     console.error(err);
+  //     res.status(500).send("Error");
+  //   });
 });
 /* GET analog read status. */
 // read setting json file
