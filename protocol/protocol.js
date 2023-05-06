@@ -4,7 +4,7 @@ const firmataProtocol = {
   DIGITAL_DATA_PORT1: "91",
   ANALOG_IO_MESSAGE: "e",
   REPORT_ANALOG_PIN: "c", // 0xc0 pin# means disable the report function
-  REPORT_DIGITAL_PORT: "d"
+  REPORT_DIGITAL_PORT: "d101",
 };
 
 module.exports = firmataProtocol;

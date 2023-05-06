@@ -117,6 +117,7 @@ io.on("connection", (socket) => {
 function readData() {
   console.log("-- Connection opened --");
   serialPort.on("data", (data) => {
+    console.log(new Date().getTime());
     let receivedData = convertToString(data, "hex");
     console.log("Data received: " + receivedData); // will remove this line
     // 收到 Buffer data 分析 Query
@@ -126,14 +127,14 @@ function readData() {
       analyzedData === firmataProtocol.REPORT_ANALOG_PIN ||
       analyzedData === firmataProtocol.REPORT_DIGITAL_PORT
     ) {
-      writeData(analyzedData, true);
+      writeData(analyzedData, true, "clickButton");
     } else {
       writeData(analyzedData);
     }
   });
 }
 
-function writeData(analyzedData, analogFlag, eventName) {
+async function writeData(analyzedData, analogFlag, eventName) {
   // 先這樣寫判斷api事件
   // switch (eventName) {
   //   case "clickButton":
@@ -153,15 +154,17 @@ function writeData(analyzedData, analogFlag, eventName) {
   if (eventName === "clickButton") {
     console.log("1");
     let status;
-    serialPort.write(analyzedData, (err) => {
-      if (err) {
-        console.log("Error :" + err.message);
-        return 400;
-      } else {
-        console.log(analyzedData.toString("hex"));
-        return 200;
-      }
-    });
+    let dataToTransport = clickButton(pin);
+    await writeSerialData(dataToTransport);
+    // serialPort.write(analyzedData, (err) => {
+    //   if (err) {
+    //     console.log("Error :" + err.message);
+    //     return 400;
+    //   } else {
+    //     console.log(analyzedData.toString("hex"));
+    //     return 200;
+    //   }
+    // });
   } else if (analogFlag === true) {
     console.log("2");
     let reportBufferArray = returnAnalogReportBufData();
@@ -261,6 +264,7 @@ function analyzeData(receivedData) {
       console.log("open the report analog at pin " + pin);
       voltToHex(pin);
       return firmataProtocol.REPORT_ANALOG_PIN;
+
     case firmataProtocol.REPORT_DIGITAL_PORT: // 0xD_port
       port = portMap.get(pin);
 
@@ -340,32 +344,17 @@ app.post("/clickbutton", async (req, res, next) => {
       res.status(400);
     }
   }
-
-  // return new Promise(async (resolve, reject) => {
-  //   // 异步操作
-  //   let pin = req.body.pin;
-  //   console.log("pin : " + pin);
-  //   let dataToTransport = clickButton(pin);
-  //   await writeSerialData(dataToTransport);
-  //   resolve("success");
-  // })
-  //   .then((result) => {
-  //     res.send(result);
-  //   })
-  //   .catch((err) => {
-  //     console.error(err);
-  //     res.status(500).send("Error");
-  //   });
 });
 /* GET analog read status. */
 // read setting json file
-app.get("/analogread", function (req, res) {
-  res.status(200).json({ analogread: SETTING.thermometer });
+app.post("/thermometer", function (req, res) {
+  res.status(200).json({ thermometer: SETTING.thermometer });
 });
 
 function writeSerialData(data) {
   return new Promise((resolve, reject) => {
     serialPort.write(data, (error) => {
+      console.log(new Date().getTime());
       if (error) {
         reject(error);
       } else {
