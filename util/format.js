@@ -49,6 +49,8 @@ function disassembleSysex(sysex, pin) {
     }
   } else if (sysex.slice(0, 1) === firmataProtocol.REPORT_ANALOG_PIN) {
     return firmataProtocol.REPORT_ANALOG_PIN;
+  } else if (sysex.slice(0, 1) === firmataProtocol.REPORT_DIGITAL_PORT) {
+    return firmataProtocol.REPORT_DIGITAL_PORT;
   } else {
     return sysex.toString();
   }
