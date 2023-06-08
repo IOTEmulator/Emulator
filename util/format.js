@@ -33,6 +33,17 @@ function combineSysex(sysex) {
 
 // disassemble sysex start & end command & any command
 function disassembleSysex(sysex, pin) {
+  // 處理一串資料直接進來
+  // let leng = sysex.length;
+  // let returnArray =[];
+  // console.log(sysex.length);
+  // if(leng > 6 ){
+  //   // 分解成6個一組
+  //   let sysexCount = leng / 6;
+  //   return 
+  // }else{
+
+  // }
   if (sysex.slice(0, 2) === START_SYSEX) {
     return sysex.slice(2, 4).toString();
   } else if (sysex.slice(0, 2) === firmataProtocol.SET_PIN_MODE) {
@@ -54,19 +65,6 @@ function disassembleSysex(sysex, pin) {
   } else {
     return sysex.toString();
   }
-}
-
-// temp write buffer message to txt
-function writeToFile(sysex) {
-  let emulatorBufferFilePath =
-    "C:/Users/11146/OneDrive/桌面/emulatorReceiveFile/LedTime.txt";
-  fs.appendFile(emulatorBufferFilePath, sysex, (err) => {
-    if (err) {
-      console.log(err.message);
-    } else {
-      console.log("Led 13 file append complete.");
-    }
-  });
 }
 
 /**
@@ -100,7 +98,8 @@ function voltToHex(pin) {
         break;
     }
     let tempB = Math.round(voltRAw).toString(16);
-    returnArray.push(Buffer.from([`0x${tempB}`, "0x00", `0xe${pin}`]));
+    // returnArray.push(Buffer.from([`0x${tempB}`, "0x00", `0xe${pin}`]));
+    returnArray.push(Buffer.from([ `0xe${pin}`,`0x${tempB}`,"0x00"]));
   });
   console.log(returnArray);
 }
@@ -117,7 +116,6 @@ module.exports = {
   convertToString,
   combineSysex,
   disassembleSysex,
-  writeToFile,
   voltToHex,
   returnAnalogReportBufData,
 };

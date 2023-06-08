@@ -38,7 +38,6 @@ const {
   convertToString,
   combineSysex,
   disassembleSysex,
-  writeToFile,
   voltToHex,
   returnAnalogReportBufData,
 } = require("./util/format");
@@ -124,10 +123,11 @@ function readData() {
     let analyzedData = analyzeData(receivedData);
     // 回應 Query
     if (
-      analyzedData === firmataProtocol.REPORT_ANALOG_PIN ||
-      analyzedData === firmataProtocol.REPORT_DIGITAL_PORT
+      analyzedData === firmataProtocol.REPORT_ANALOG_PIN
     ) {
-      writeData(analyzedData, true, "clickButton");
+      writeData(analyzedData, true);
+    } else if (analyzedData === firmataProtocol.REPORT_DIGITAL_PORT) {
+      // writeData(analyzedData, true, "clickButton");
     } else {
       writeData(analyzedData);
     }
@@ -183,7 +183,7 @@ async function writeData(analyzedData, analogFlag, eventName) {
         "mgs write : " + convertToString(reportBufferArray[i], "hex")
       );
       i++;
-    }, 200);
+    }, 5);
   } else {
     console.log("3");
     let combinedData = combineSysex(analyzedData);
@@ -204,7 +204,7 @@ let pin;
 let mode;
 let port;
 // local app data
-app.locals.ledstatus;
+app.locals.ledstatus = "off";
 app.locals.LSB;
 app.locals.MSB;
 function analyzeData(receivedData) {
@@ -260,7 +260,7 @@ function analyzeData(receivedData) {
       }
       return "";
     case firmataProtocol.REPORT_ANALOG_PIN:
-      pin = receivedData.slice(3, 4).toString();
+      pin = receivedData.slice(1, 2).toString();
       console.log("open the report analog at pin " + pin);
       voltToHex(pin);
       return firmataProtocol.REPORT_ANALOG_PIN;
@@ -268,7 +268,7 @@ function analyzeData(receivedData) {
     case firmataProtocol.REPORT_DIGITAL_PORT: // 0xD_port
       port = portMap.get(pin);
 
-      return firmataProtocol.REPORT_ANALOG_PIN;
+      return firmataProtocol.REPORT_DIGITAL_PORT;
 
     default:
       // other buffer message like Led => write to txt
@@ -286,10 +286,12 @@ function LedColorMapping(LSB, MSB) {
     // blink 開啟
     io.sockets.emit("getMessage", { LedControl: "on" });
     app.locals.ledstatus = "on";
+    console.log("on");
   } else {
     // blink 關掉
     io.sockets.emit("getMessage", { LedControl: "off" });
     app.locals.ledstatus = "off";
+    console.log("off");
   }
   // pwm pin
 }
@@ -302,6 +304,7 @@ let { clickButton, controlLedBrightness } = require("./util/event");
 
 /* GET digital write status. */
 app.get("/ledstatus", (req, res) => {
+  console.log( "your led status : " + app.locals.ledstatus);
   res.status(200).json({ "your led status": app.locals.ledstatus });
 });
 
@@ -329,22 +332,28 @@ app.get("/brightness", async function (req, res) {
     res.status(400).json({ brightness: "fail" });
   }
 });
-
-/* POST : user post this api to emulate clicking button. (for J5 digital read) */
-app.post("/clickbutton", async (req, res, next) => {
-  let pin = req.body.pin;
+/* PUT : user PUT this api to emulate clicking button. (for J5 digital read) */
+app.put("/clickbutton/:pin_number/:status", async (req, res, next) => {
+  console.log("put /c");
+  console.log("pin number : " + req.params.pin_number);
+  console.log("button status : " + req.params.status);
+  let pin = req.params.pin_number;
+  let status = req.params.status;
   if (pin > 19 || pin < 0) {
     res.status(200).json({ success: false });
   } else {
     try {
-      let dataToTransport = clickButton(pin);
+      let dataToTransport = clickButton(pin , status);
+      console.log("await for Promise");
       await writeSerialData(dataToTransport);
+      console.log("Promise success");
       res.status(200).json({ success: true });
     } catch (error) {
       res.status(400);
     }
   }
 });
+
 /* GET analog read status. */
 // read setting json file
 app.post("/thermometer", function (req, res) {
@@ -354,6 +363,7 @@ app.post("/thermometer", function (req, res) {
 function writeSerialData(data) {
   return new Promise((resolve, reject) => {
     serialPort.write(data, (error) => {
+      console.log(data);
       console.log(new Date().getTime());
       if (error) {
         reject(error);
