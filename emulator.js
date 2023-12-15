@@ -7,6 +7,9 @@ let cookieParser = require("cookie-parser");
 let logger = require("morgan");
 const bodyParser = require("body-parser");
 
+// 用於引入.env檔案的模組
+require('dotenv').config();
+
 // let indexRouter = require("./routes/index");
 app.use(logger("dev"));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -91,7 +94,7 @@ let i2cIsOpen = false;
  *
  */
 
-const bindingPort = "COM122";
+const bindingPort = process.env.BINDINGPORT;
 
 let serialPort = new SerialPort(bindingPort, {
   baudRate: 57600,
@@ -118,7 +121,7 @@ function readData() {
   serialPort.on("data", (data) => {
     console.log(new Date().getTime());
     let receivedData = convertToString(data, "hex");
-    console.log("Data received: " + receivedData); // will remove this line
+    // console.log("Data received: " + receivedData); // will remove this line
     // 收到 Buffer data 分析 Query
     let analyzedData = analyzeData(receivedData);
     // 回應 Query
@@ -152,7 +155,7 @@ async function writeData(analyzedData, analogFlag, eventName) {
   //     break;
   // }
   if (eventName === "clickButton") {
-    console.log("1");
+    console.log("writeData : 1");
     let status;
     let dataToTransport = clickButton(pin);
     await writeSerialData(dataToTransport);
@@ -166,7 +169,7 @@ async function writeData(analyzedData, analogFlag, eventName) {
     //   }
     // });
   } else if (analogFlag === true) {
-    console.log("2");
+    console.log("writeData : 2");
     let reportBufferArray = returnAnalogReportBufData();
     let i = 0;
     let interval = setInterval(function () {
@@ -183,9 +186,9 @@ async function writeData(analyzedData, analogFlag, eventName) {
         "mgs write : " + convertToString(reportBufferArray[i], "hex")
       );
       i++;
-    }, 5);
+    }, 1);
   } else {
-    console.log("3");
+    console.log("writeData : 3");
     let combinedData = combineSysex(analyzedData);
     let bufferData = convertToBuffer(combinedData, "hex");
     serialPort.write(bufferData, (err) => {
@@ -251,8 +254,8 @@ function analyzeData(receivedData) {
       // 之後拉出去成一個function
       app.locals.LSB = receivedData.slice(2, 4).toString();
       app.locals.MSB = receivedData.slice(4, 6).toString();
-      console.log("LSB" + app.locals.LSB);
-      console.log("MSB" + app.locals.MSB);
+      // console.log("LSB" + app.locals.LSB);
+      // console.log("MSB" + app.locals.MSB);
       if (mode === MODES.PWM) {
         controlLedBrightness(app.locals.LSB, app.locals.MSB);
       } else {
@@ -280,7 +283,7 @@ function analyzeData(receivedData) {
 function LedColorMapping(LSB, MSB) {
   // digital pin
   let anyNum = ledColorMap.get(pin);
-  console.log(anyNum);
+  // console.log(anyNum);
   // check pin's buffer
   if (LSB === anyNum[0] && MSB === anyNum[1]) {
     // blink 開啟
@@ -304,7 +307,7 @@ let { clickButton, controlLedBrightness } = require("./util/event");
 
 /* GET digital write status. */
 app.get("/ledstatus", (req, res) => {
-  console.log( "your led status : " + app.locals.ledstatus);
+  console.log("your led status : " + app.locals.ledstatus);
   res.status(200).json({ "your led status": app.locals.ledstatus });
 });
 
@@ -343,7 +346,7 @@ app.put("/clickbutton/:pin_number/:status", async (req, res, next) => {
     res.status(200).json({ success: false });
   } else {
     try {
-      let dataToTransport = clickButton(pin , status);
+      let dataToTransport = clickButton(pin, status);
       console.log("await for Promise");
       await writeSerialData(dataToTransport);
       console.log("Promise success");
